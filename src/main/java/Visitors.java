@@ -1,7 +1,4 @@
 import java.io.*;
-
-import org.apache.commons.lang3.time.DateUtils;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -26,17 +23,16 @@ public class Visitors {
 
     private void getStatistics() {
         int inervalsInDay = HOURSOFWORK * 60 / interval;
-        SimpleDateFormat parser = new SimpleDateFormat("HH:mm:ss");
+        //SimpleDateFormat parser = new SimpleDateFormat("HH:mm:ss");
         Date currentBegin = null;
         Map<Date, Integer> countVisitors = new HashMap<>();
+        Calendar cal = Calendar.getInstance();
+        cal.set(1900, 1, 1, 8, 0, 0);
+        currentBegin = cal.getTime();
+        cal.set(1900, 1, 1, 8, interval, 0);
+        Date currentEnd = cal.getTime();
 
-        try {
-            currentBegin = parser.parse("08:00:00");
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        Date currentEnd = DateUtils.addMinutes(currentBegin, interval);
-
+        currentEnd.setTime(currentBegin.getTime()+interval*60*1000);
         List<Visitor> visitorsTmp = new ArrayList<Visitor>(visitors);
         for (int i = 0; i < inervalsInDay - 1; i++) {
             int listCount = visitorsTmp.size();
@@ -53,9 +49,9 @@ public class Visitors {
                 }
 
             }
-            countVisitors.put(currentBegin, counter);
-            currentBegin = currentEnd;
-            currentEnd = DateUtils.addMinutes(currentBegin, interval);
+            countVisitors.put(new Date(currentBegin.getTime()), counter);
+            currentBegin.setTime(currentEnd.getTime());
+            currentEnd.setTime(currentBegin.getTime()+interval*60*1000);
         }
         int maxVisitors = 0;
         Date maxLoad = null;
@@ -69,42 +65,39 @@ public class Visitors {
 
         }
 
-        System.out.println("Maximum visitors in interval from " + parser.format(maxLoad) + " to " + parser.format(DateUtils.addMinutes(maxLoad, interval)) + " and there were visitors " + maxVisitors);
+        Date maxLoadEnd = new Date();
+        maxLoadEnd.setTime(maxLoad.getTime()+interval*60*1000);
+        SimpleDateFormat parser = new SimpleDateFormat("HH:mm:ss");
+        System.out.println("Maximum visitors in interval from " + parser.format(maxLoad) + " to " + parser.format(maxLoadEnd) + " and there were visitors " + maxVisitors);
 
 
+    }
+
+    private Date getParsedDate (String str) {
+        Calendar cal = Calendar.getInstance();
+        String[] time = str.split(":");
+        Integer[] intervalsOfTime = new Integer[time.length];
+        for (int i = 0; i < time.length; i++) {
+            intervalsOfTime[i] = Integer.parseInt(time[i]);
+        }
+        cal.set(1900, 1, 1, intervalsOfTime[0], intervalsOfTime[1], intervalsOfTime[2]);
+        Date timeIn = cal.getTime();
+        return timeIn;
     }
 
 
     private void getNumbersFromFile() {
         //if file writed in OS Windows and started with BOM symbol
         Character bom = 65279;
+        Calendar cal = Calendar.getInstance();
         try {
             //BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("C:\\IdeaProjects\\visitors\\src\\main\\resources\\visitors.txt")));
             BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(this.file)));
             int count = 0;
             while (reader.ready()) {
                 String[] str = reader.readLine().replace(bom, ' ').trim().split(" ");
-                /*int hoursIn = Integer.parseInt(str[0].split(":")[0]);
-                int minutesIn = Integer.parseInt(str[0].split(":")[1]);
-                int secondsIn = Integer.parseInt(str[0].split(":")[2]);
-
-                int hoursOut = Integer.parseInt(str[1].split(":")[0]);
-                int minutesOut = Integer.parseInt(str[1].split(":")[1]);
-                int secondsOut = Integer.parseInt(str[1].split(":")[2]);*/
-                SimpleDateFormat parser = new SimpleDateFormat("HH:mm:ss");
-                Date timeIn = null;
-                Date timeOut = null;
-                try {
-                    timeIn = parser.parse(str[0]);
-                    timeOut = parser.parse(str[1]);
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-/*
-                LocalTime timeIn = LocalTime.of(hoursIn, minutesIn, secondsIn);
-                LocalTime timeOut = LocalTime.of(hoursOut, minutesOut, secondsOut);
-*/
-
+                Date timeIn = getParsedDate(str[0]);
+                Date timeOut = getParsedDate(str[1]);
                 this.visitors.add(new Visitor(timeIn, timeOut));
             }
         } catch (IOException e) {
